@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+langchain
+langchain-openai
+langgraph
+langsmith
+python-dotenv
+pdfplumber
+psycopg2-binary
+pydantic
+pdfplumber
