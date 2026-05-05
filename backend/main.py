@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,19 +9,27 @@ from db.claims_repo import save_claim, get_all_claims
 
 load_dotenv()
 
-app = FastAPI(title="Claimant API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        init_db()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"DB init failed: {e} — continuing without DB")
+    yield
+
+app = FastAPI(title="Claimant API", lifespan=lifespan)
 graph = build_graph()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://divyasajjan1.github.io"
+    ],
     allow_methods=["*"],
     allow_headers=["*"]
 )
-
-@app.on_event("startup")
-def startup():
-    init_db()
 
 class DisputeRequest(BaseModel):
     raw_input: str
@@ -44,7 +53,11 @@ def submit_dispute(request: DisputeRequest):
         "escalation_summary": ""
     })
 
-    save_claim(result)        # persist to Azure PostgreSQL
+    try:
+        save_claim(result)
+        print("Claim saved successfully")
+    except Exception as e:
+        print(f"DB Error: {e}")
 
     return {
         "claim": result["claim"],
