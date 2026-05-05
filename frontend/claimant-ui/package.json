@@ -14,7 +14,7 @@
     "tailwindcss": "^4.2.4",
     "web-vitals": "^2.1.4"
   },
-  "homepage": "https://divyasajjan1.github.io",
+  "homepage": "https://divyasajjan1.github.io/claimant",
   "scripts": {
       "predeploy": "npm run build",
       "deploy": "gh-pages -d build",
