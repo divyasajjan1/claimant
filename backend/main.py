@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from graph.claim_graph import build_graph
 from db.database import init_db
 from db.claims_repo import save_claim, get_all_claims
+from utils.chunker import chunk_docs
+from utils.blob_loader import load_all_docs
+from utils.azure_search import create_index, upload_chunks, search_chunks
 
 load_dotenv()
 
@@ -23,10 +26,12 @@ graph = build_graph()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://divyasajjan1.github.io"
-    ],
+    # allow_origins=["*",
+    #     "http://localhost:3000",
+    #     "https://divyasajjan1.github.io"
+    # ],
+    allow_origins=["https://divyasajjan1.github.io"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"]
 )
@@ -34,9 +39,33 @@ app.add_middleware(
 class DisputeRequest(BaseModel):
     raw_input: str
 
+
 @app.get("/")
 def health_check():
     return {"status": "Claimant API is running"}
+
+@app.get("/debug-chunks")
+def debug_chunks():
+    docs = load_all_docs()
+    return chunk_docs(docs)
+
+@app.get("/setup-index")
+def setup_index():
+    create_index()
+    return {"status": "index created"}
+
+@app.get("/upload-chunks")
+def upload():
+    docs = load_all_docs()
+    chunks = chunk_docs(docs)
+
+    upload_chunks(chunks)
+
+    return {"uploaded": len(chunks)}
+
+@app.get("/debug-retrieval")
+def debug_retrieval(query: str):
+    return search_chunks(query)
 
 @app.post("/dispute")
 def submit_dispute(request: DisputeRequest):

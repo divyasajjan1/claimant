@@ -7,6 +7,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
 
   const submitDispute = async () => {
+    console.log("SUBMIT FUNCTION CALLED");
     setLoading(true);
     setResult(null);
     try {
@@ -15,7 +16,9 @@ export default function App() {
       });
       setResult(response.data);
     } catch (err) {
-      alert("Error submitting dispute. Is the backend running?");
+      // alert("Error submitting dispute. Is the backend running?");
+      console.error("Full error:", err);
+      alert("Error: " + (err.response?.data?.detail || err.message || JSON.stringify(err)));
     }
     setLoading(false);
   };
@@ -46,6 +49,7 @@ export default function App() {
       </div>
 
       <button
+        type="button"
         onClick={submitDispute}
         disabled={loading || !input}
         style={{

@@ -9,3 +9,10 @@ python-dotenv
 pdfplumber
 psycopg2-binary
 pydantic
+azure-storage-blob
+PyMuPDF
+langchain_text_splitters
+chromadb
+sentence-transformers
+langchain-huggingface
+azure-search-documents
