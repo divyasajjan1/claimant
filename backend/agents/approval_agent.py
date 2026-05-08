@@ -3,6 +3,7 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from dotenv import load_dotenv
+from backend.utils.azure_search import search_chunks
 
 load_dotenv()
 
@@ -11,6 +12,7 @@ llm = ChatGroq(
     api_key=os.getenv("GROQ_API_KEY"),
     temperature=0
 )
+
 
 approval_prompt = ChatPromptTemplate.from_messages([
     ("system", """
@@ -33,6 +35,7 @@ approval_prompt = ChatPromptTemplate.from_messages([
     }}
     """),
     ("human", """
+    Relevant banking policies: {policy_context}
     Claim: {claim}
     Verified: {verified}
     Fraud score: {fraud_score}
@@ -44,7 +47,12 @@ approval_chain = approval_prompt | llm | JsonOutputParser()
 
 
 def run_approval(claim: dict, verified: bool, fraud_score: float, fraud_recommendation: str) -> dict:
+    retrieved_chunks = search_chunks(str(claim))
+    policy_context = "\n\n".join(
+        [chunk["content"] for chunk in retrieved_chunks]
+    )
     return approval_chain.invoke({
+        "policy_context": policy_context,
         "claim": str(claim),
         "verified": verified,
         "fraud_score": fraud_score,
