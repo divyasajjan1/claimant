@@ -26,12 +26,14 @@ approval_prompt = ChatPromptTemplate.from_messages([
     - If fraud_score < 0.4 and verified=true → approve
     - Otherwise → escalate
     
-    Respond ONLY with valid JSON:
+    Respond ONLY with valid JSON. 
+    You MUST cite policy sources using [Source: ...] format from provided context.:
     {{
         "decision": "approve / reject / escalate",
         "refund_amount": 0.0,
         "reason": "brief explanation",
-        "next_step": "what happens next"
+        "next_step": "what happens next",
+        "citations": list(set([c["source"] for c in retrieved_chunks]))
     }}
     """),
     ("human", """
@@ -48,9 +50,10 @@ approval_chain = approval_prompt | llm | JsonOutputParser()
 
 def run_approval(claim: dict, verified: bool, fraud_score: float, fraud_recommendation: str) -> dict:
     retrieved_chunks = search_chunks(str(claim))
-    policy_context = "\n\n".join(
-        [chunk["content"] for chunk in retrieved_chunks]
-    )
+    policy_context = "\n\n".join([
+        f"[Source: {c['source']} | Chunk: {c['id']}]\n{c['content']}"
+        for c in retrieved_chunks
+    ])
     return approval_chain.invoke({
         "policy_context": policy_context,
         "claim": str(claim),

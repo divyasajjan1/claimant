@@ -8,7 +8,6 @@ from azure.search.documents.indexes.models import (
     SearchIndex,
     SimpleField,
     SearchField,
-    SearchFieldDataType,
     VectorSearch,
     HnswAlgorithmConfiguration,
     VectorSearchProfile
@@ -38,20 +37,26 @@ def create_index():
     client = SearchIndexClient(endpoint, AzureKeyCredential(key))
 
     fields = [
-        SimpleField(name="id", type=SearchFieldDataType.String, key=True),
+        SimpleField(name="id", type="Edm.String", key=True),
 
         SearchField(
             name="content",
-            type=SearchFieldDataType.String,
+            type="Edm.String",
             searchable=True
         ),
 
         SearchField(
             name="contentVector",
-            type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+            type="Collection(Edm.Single)",
             searchable=True,
             vector_search_dimensions=384,
             vector_search_profile_name="default"
+        ),
+
+        SimpleField(
+            name="source",
+            type="Edm.String",
+            searchable=True
         )
     ]
 
@@ -87,7 +92,8 @@ def upload_chunks(chunks):
         docs.append({
             "id": str(i),
             "content": c["text"],
-            "contentVector": vec
+            "contentVector": vec,
+            "source": c["source"]
         })
 
     client.upload_documents(docs)
@@ -115,6 +121,8 @@ def search_chunks(query, k=3):
     return [
         {
             "content": r["content"],
+            "source": r.get("source", "unknown"),
+            "id": r["id"],
             "score": r["@search.score"]
         }
         for r in results
