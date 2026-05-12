@@ -3,7 +3,6 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from dotenv import load_dotenv
-from backend.utils.azure_search import search_chunks
 
 load_dotenv()
 
@@ -33,7 +32,7 @@ approval_prompt = ChatPromptTemplate.from_messages([
         "refund_amount": 0.0,
         "reason": "brief explanation",
         "next_step": "what happens next",
-        "citations": list(set([c["source"] for c in retrieved_chunks]))
+        "citations": ["policy1.pdf", "policy2.pdf"]
     }}
     """),
     ("human", """
@@ -48,12 +47,7 @@ approval_prompt = ChatPromptTemplate.from_messages([
 approval_chain = approval_prompt | llm | JsonOutputParser()
 
 
-def run_approval(claim: dict, verified: bool, fraud_score: float, fraud_recommendation: str) -> dict:
-    retrieved_chunks = search_chunks(str(claim))
-    policy_context = "\n\n".join([
-        f"[Source: {c['source']} | Chunk: {c['id']}]\n{c['content']}"
-        for c in retrieved_chunks
-    ])
+def run_approval(claim: dict, verified: bool, fraud_score: float, fraud_recommendation: str, policy_context: str) -> dict:
     return approval_chain.invoke({
         "policy_context": policy_context,
         "claim": str(claim),

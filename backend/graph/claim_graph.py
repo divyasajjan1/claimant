@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, END
 from agents.intake_agent import run_intake
 from agents.doc_verify_agent import run_doc_verify
 from agents.fraud_agent import run_fraud_detection
+from agents.rules_agent import run_rules_lookup
 from agents.approval_agent import run_approval
 from agents.comms_agent import run_comms
 from agents.escalation_agent import run_escalation
@@ -18,6 +19,7 @@ class ClaimState(TypedDict):
     decision_reason: str
     customer_message: str
     escalation_summary: str
+    policy_context: str
 
 def intake_node(state: ClaimState) -> ClaimState:
     state["claim"] = run_intake(state["raw_input"])
@@ -36,12 +38,18 @@ def fraud_node(state: ClaimState) -> ClaimState:
     print("Fraud Detection:", result)
     return state
 
+def rules_node(state: ClaimState) -> ClaimState:
+    state["policy_context"] = run_rules_lookup(state["raw_input"])
+    print("Rules node executed")
+    return state
+
 def approval_node(state: ClaimState) -> ClaimState:
     result = run_approval(
         state["claim"],
         state["verified"],
         state["fraud_score"],
-        state["fraud_recommendation"]
+        state["fraud_recommendation"],
+        state["policy_context"]
     )
     state["decision"] = result["decision"]
     state["refund_amount"] = result["refund_amount"]
@@ -78,6 +86,7 @@ def build_graph():
     graph.add_node("intake", intake_node)
     graph.add_node("doc_verify", doc_verify_node)
     graph.add_node("fraud_detection", fraud_node)
+    graph.add_node("rules_lookup", rules_node)
     graph.add_node("approval", approval_node)
     graph.add_node("comms", comms_node)
     graph.add_node("escalation", escalation_node)
@@ -85,7 +94,8 @@ def build_graph():
     graph.set_entry_point("intake")
     graph.add_edge("intake", "doc_verify")
     graph.add_edge("doc_verify", "fraud_detection")
-    graph.add_edge("fraud_detection", "approval")
+    graph.add_edge("fraud_detection", "rules_lookup")
+    graph.add_edge("rules_lookup", "approval")
 
     # Conditional edge — escalate or notify customer
     graph.add_conditional_edges("approval", route_after_approval, {
